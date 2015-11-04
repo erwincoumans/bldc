@@ -24,14 +24,19 @@
 
 #include "encoder.h"
 #include "ch.h"
-#include "conf_general.h"
 #include "hal.h"
 #include "stm32f4xx_conf.h"
 #include "hw.h"
 
+// Private variables
+static bool index_found;
+
 void encoder_init(void) {
 	EXTI_InitTypeDef   EXTI_InitStructure;
 	NVIC_InitTypeDef   NVIC_InitStructure;
+
+	// Initialize variables
+	index_found = false;
 
 	palSetPadMode(HW_HALL_ENC_GPIO1, HW_HALL_ENC_PIN1,
 			PAL_MODE_ALTERNATE(HW_ENC_TIM_AF) |
@@ -78,4 +83,22 @@ void encoder_init(void) {
 
 float encoder_read_deg(void) {
 	return ((float)HW_ENC_TIM->CNT * 360.0) / (float)ENCODER_COUNTS;
+}
+
+/**
+ * Reset the encoder counter. Should be called from the index interrupt.
+ */
+void encoder_reset(void) {
+	HW_ENC_TIM->CNT = 0;
+	index_found = true;
+}
+
+/**
+ * Check if the index pulse is found.
+ *
+ * @return
+ * True if the index is found, false otherwise.
+ */
+bool encoder_index_found(void) {
+	return index_found;
 }

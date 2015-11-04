@@ -29,7 +29,7 @@
 #include "hal.h"
 #include "stm32f4xx_conf.h"
 #include "servo_dec.h"
-#include "mcpwm.h"
+#include "mc_interface.h"
 #include "hw.h"
 #include "timeout.h"
 
@@ -54,10 +54,10 @@ static THD_FUNCTION(gurgalof_thread, arg) {
 		pwr -= MIN_PWR;
 
 		if (pwr < 0.0) {
-			mcpwm_set_current(0.0);
+			mc_interface_set_current(0.0);
 		} else {
-			mcpwm_set_duty(pwr);
-//			mcpwm_set_current(pwr * mcpwm_get_configuration()->l_current_max);
+			mc_interface_set_duty(pwr);
+//			mc_interface_set_current(pwr * mc_interface_get_configuration()->l_current_max);
 		}
 
 		timeout_reset();

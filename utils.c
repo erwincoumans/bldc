@@ -183,6 +183,50 @@ int utils_middle_of_3_int(int a, int b, int c) {
 	return middle;
 }
 
+// Fast inverse square-root
+// See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
+float utils_fast_inv_sqrt(float x) {
+	union {
+		float as_float;
+		long as_int;
+	} un;
+
+	float xhalf = 0.5f*x;
+	un.as_float = x;
+	un.as_int = 0x5f3759df - (un.as_int >> 1);
+	un.as_float = un.as_float * (1.5f - xhalf * un.as_float * un.as_float);
+	return un.as_float;
+}
+
+/**
+ * Truncate the magnitude of a vector.
+ *
+ * @param x
+ * The first component.
+ *
+ * @param y
+ * The second component.
+ *
+ * @param max
+ * The maximum magnitude.
+ *
+ * @return
+ * True if saturation happened, false otherwise
+ */
+bool utils_saturate_vector_2d(float *x, float *y, float max) {
+	bool retval = false;
+	float mag = sqrtf(*x * *x + *y * *y);
+
+	if (mag > max) {
+		const float f = max / mag;
+		*x *= f;
+		*y *= f;
+		retval = true;
+	}
+
+	return retval;
+}
+
 /**
  * A system locking function with a counter. For every lock, a corresponding unlock must
  * exist to unlock the system. That means, if lock is called five times, unlock has to

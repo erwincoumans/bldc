@@ -25,6 +25,8 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#include <stdbool.h>
+
 void utils_step_towards(float *value, float goal, float step);
 float utils_calc_ratio(float low, float high, float val);
 void utils_norm_angle(float *angle);
@@ -35,6 +37,8 @@ void utils_deadband(float *value, float tres, float max);
 float utils_angle_difference(float angle1, float angle2);
 float utils_middle_of_3(float a, float b, float c);
 int utils_middle_of_3_int(int a, int b, int c);
+float utils_fast_inv_sqrt(float x);
+bool utils_saturate_vector_2d(float *x, float *y, float max);
 void utils_sys_lock_cnt(void);
 void utils_sys_unlock_cnt(void);
 

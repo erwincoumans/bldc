@@ -57,6 +57,7 @@ typedef enum {
 typedef enum {
 	MOTOR_TYPE_BLDC = 0,
 	MOTOR_TYPE_DC,
+	MOTOR_TYPE_FOC
 } mc_motor_type;
 
 typedef enum {
@@ -132,6 +133,12 @@ typedef struct {
 	// Hall sensor
 	int8_t hall_table[8];
 	float hall_sl_erpm;
+	// FOC
+	float foc_current_kp;
+	float foc_current_ki;
+	float foc_f_sw;
+	float foc_encoder_offset;
+	bool foc_encoder_inverted;
 	// Speed PID
 	float s_pid_kp;
 	float s_pid_ki;
@@ -284,8 +291,10 @@ typedef enum {
 	COMM_SET_SERVO_POS,
 	COMM_SET_MCCONF,
 	COMM_GET_MCCONF,
+	COMM_GET_MCCONF_DEFAULT,
 	COMM_SET_APPCONF,
 	COMM_GET_APPCONF,
+	COMM_GET_APPCONF_DEFAULT,
 	COMM_SAMPLE_PRINT,
 	COMM_TERMINAL_CMD,
 	COMM_PRINT,
@@ -324,7 +333,6 @@ typedef struct {
 	float rpm;
 	int tacho;
 	int cycles_running;
-	int pwm_cycles;
 	int tim_val_samp;
 	int tim_current_samp;
 	int tim_top;

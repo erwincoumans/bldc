@@ -25,6 +25,8 @@
 #include "ch.h"
 #include "hal.h"
 #include "terminal.h"
+#include "mcpwm.h"
+#include "mc_interface.h"
 #include "commands.h"
 #include "main.h"
 #include "hw.h"
@@ -58,7 +60,7 @@ void terminal_process_string(char *str) {
 	if (strcmp(argv[0], "ping") == 0) {
 		commands_printf("pong\n");
 	} else if (strcmp(argv[0], "stop") == 0) {
-		mcpwm_set_duty(0);
+		mc_interface_set_duty(0);
 		commands_printf("Motor stopped\n");
 	} else if (strcmp(argv[0], "last_adc_duration") == 0) {
 		commands_printf("Latest ADC duration: %.4f ms", (double)(mcpwm_get_last_adc_isr_duration() * 1000.0));
@@ -87,14 +89,14 @@ void terminal_process_string(char *str) {
 		} while (tp != NULL);
 		commands_printf("");
 	} else if (strcmp(argv[0], "fault") == 0) {
-		commands_printf("%s\n", mcpwm_fault_to_string(mcpwm_get_fault()));
+		commands_printf("%s\n", mc_interface_fault_to_string(mc_interface_get_fault()));
 	} else if (strcmp(argv[0], "faults") == 0) {
 		if (fault_vec_write == 0) {
 			commands_printf("No faults registered since startup\n");
 		} else {
 			commands_printf("The following faults were registered since start:\n");
 			for (int i = 0;i < fault_vec_write;i++) {
-				commands_printf("Fault            : %s", mcpwm_fault_to_string(fault_vec[i].fault));
+				commands_printf("Fault            : %s", mc_interface_fault_to_string(fault_vec[i].fault));
 				commands_printf("Current          : %.1f", (double)fault_vec[i].current);
 				commands_printf("Current filtered : %.1f", (double)fault_vec[i].current_filtered);
 				commands_printf("Voltage          : %.2f", (double)fault_vec[i].voltage);
@@ -102,7 +104,6 @@ void terminal_process_string(char *str) {
 				commands_printf("RPM              : %.1f", (double)fault_vec[i].rpm);
 				commands_printf("Tacho            : %d", fault_vec[i].tacho);
 				commands_printf("Cycles running   : %d", fault_vec[i].cycles_running);
-				commands_printf("PWM cycles       : %d", fault_vec[i].pwm_cycles);
 				commands_printf("TIM duty         : %d", (int)((float)fault_vec[i].tim_top * fault_vec[i].duty));
 				commands_printf("TIM val samp     : %d", fault_vec[i].tim_val_samp);
 				commands_printf("TIM current samp : %d", fault_vec[i].tim_current_samp);
@@ -112,23 +113,31 @@ void terminal_process_string(char *str) {
 			}
 		}
 	} else if (strcmp(argv[0], "rpm") == 0) {
-		commands_printf("Electrical RPM: %.2f rpm\n", (double)mcpwm_get_rpm());
+		commands_printf("Electrical RPM: %.2f rpm\n", (double)mc_interface_get_rpm());
 	} else if (strcmp(argv[0], "tacho") == 0) {
 		commands_printf("Tachometer counts: %i\n", mcpwm_get_tachometer_value(0));
 	} else if (strcmp(argv[0], "tim") == 0) {
 		chSysLock();
 		volatile int t1_cnt = TIM1->CNT;
 		volatile int t8_cnt = TIM8->CNT;
+		volatile int dir1 = !!(TIM1->CR1 & (1 << 4));
+		volatile int dir8 = !!(TIM8->CR1 & (1 << 4));
 		chSysUnlock();
-		int duty = TIM1->CCR1;
+		int duty1 = TIM1->CCR1;
+		int duty2 = TIM1->CCR2;
+		int duty3 = TIM1->CCR3;
 		int top = TIM1->ARR;
 		int voltage_samp = TIM8->CCR1;
 		int current1_samp = TIM1->CCR4;
 		int current2_samp = TIM8->CCR2;
 		commands_printf("Tim1 CNT: %i", t1_cnt);
 		commands_printf("Tim8 CNT: %u", t8_cnt);
-		commands_printf("Duty cycle: %u", duty);
+		commands_printf("Duty cycle1: %u", duty1);
+		commands_printf("Duty cycle2: %u", duty2);
+		commands_printf("Duty cycle3: %u", duty3);
 		commands_printf("Top: %u", top);
+		commands_printf("Dir1: %u", dir1);
+		commands_printf("Dir8: %u", dir8);
 		commands_printf("Voltage sample: %u", voltage_samp);
 		commands_printf("Current 1 sample: %u", current1_samp);
 		commands_printf("Current 2 sample: %u\n", current2_samp);
@@ -144,7 +153,7 @@ void terminal_process_string(char *str) {
 			sscanf(argv[2], "%f", &min_rpm);
 			sscanf(argv[3], "%f", &low_duty);
 
-			const volatile mc_configuration *mcconf = mcpwm_get_configuration();
+			const volatile mc_configuration *mcconf = mc_interface_get_configuration();
 
 			if (current > 0.0 && current < mcconf->l_current_max &&
 					min_rpm > 10.0 && min_rpm < 3000.0 &&

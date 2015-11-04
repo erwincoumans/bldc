@@ -33,6 +33,7 @@
 #include "terminal.h"
 #include "hw.h"
 #include "mcpwm.h"
+#include "mc_interface.h"
 #include "app.h"
 #include "timeout.h"
 #include "servo_dec.h"
@@ -163,48 +164,48 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		buffer_append_int16(send_buffer, (int16_t)(NTC_TEMP(ADC_IND_TEMP_MOS5) * 10.0), &ind);
 		buffer_append_int16(send_buffer, (int16_t)(NTC_TEMP(ADC_IND_TEMP_MOS6) * 10.0), &ind);
 		buffer_append_int16(send_buffer, (int16_t)(NTC_TEMP(ADC_IND_TEMP_PCB) * 10.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mcpwm_read_reset_avg_motor_current() * 100.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mcpwm_read_reset_avg_input_current() * 100.0), &ind);
-		buffer_append_int16(send_buffer, (int16_t)(mcpwm_get_duty_cycle_now() * 1000.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)mcpwm_get_rpm(), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(mc_interface_read_reset_avg_motor_current() * 100.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(mc_interface_read_reset_avg_input_current() * 100.0), &ind);
+		buffer_append_int16(send_buffer, (int16_t)(mc_interface_get_duty_cycle_now() * 1000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)mc_interface_get_rpm(), &ind);
 		buffer_append_int16(send_buffer, (int16_t)(GET_INPUT_VOLTAGE() * 10.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mcpwm_get_amp_hours(false) * 10000.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mcpwm_get_amp_hours_charged(false) * 10000.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mcpwm_get_watt_hours(false) * 10000.0), &ind);
-		buffer_append_int32(send_buffer, (int32_t)(mcpwm_get_watt_hours_charged(false) * 10000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(mc_interface_get_amp_hours(false) * 10000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(mc_interface_get_amp_hours_charged(false) * 10000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(mc_interface_get_watt_hours(false) * 10000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(mc_interface_get_watt_hours_charged(false) * 10000.0), &ind);
 		buffer_append_int32(send_buffer, mcpwm_get_tachometer_value(false), &ind);
 		buffer_append_int32(send_buffer, mcpwm_get_tachometer_abs_value(false), &ind);
-		send_buffer[ind++] = mcpwm_get_fault();
+		send_buffer[ind++] = mc_interface_get_fault();
 		commands_send_packet(send_buffer, ind);
 		break;
 
 	case COMM_SET_DUTY:
 		ind = 0;
-		mcpwm_set_duty((float)buffer_get_int32(data, &ind) / 100000.0);
+		mc_interface_set_duty((float)buffer_get_int32(data, &ind) / 100000.0);
 		timeout_reset();
 		break;
 
 	case COMM_SET_CURRENT:
 		ind = 0;
-		mcpwm_set_current((float)buffer_get_int32(data, &ind) / 1000.0);
+		mc_interface_set_current((float)buffer_get_int32(data, &ind) / 1000.0);
 		timeout_reset();
 		break;
 
 	case COMM_SET_CURRENT_BRAKE:
 		ind = 0;
-		mcpwm_set_brake_current((float)buffer_get_int32(data, &ind) / 1000.0);
+		mc_interface_set_brake_current((float)buffer_get_int32(data, &ind) / 1000.0);
 		timeout_reset();
 		break;
 
 	case COMM_SET_RPM:
 		ind = 0;
-		mcpwm_set_pid_speed((float)buffer_get_int32(data, &ind));
+		mc_interface_set_pid_speed((float)buffer_get_int32(data, &ind));
 		timeout_reset();
 		break;
 
 	case COMM_SET_POS:
 		ind = 0;
-		mcpwm_set_pid_pos((float)buffer_get_int32(data, &ind) / 1000000.0);
+		mc_interface_set_pid_pos((float)buffer_get_int32(data, &ind) / 1000000.0);
 		timeout_reset();
 		break;
 
@@ -225,7 +226,7 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		break;
 
 	case COMM_SET_MCCONF:
-		mcconf = *mcpwm_get_configuration();
+		mcconf = *mc_interface_get_configuration();
 
 		ind = 0;
 		mcconf.pwm_mode = data[ind++];
@@ -292,18 +293,23 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		mcconf.m_current_backoff_gain = (float)buffer_get_float32(data, 1000000.0, &ind);
 
 		conf_general_store_mc_configuration(&mcconf);
-		mcpwm_set_configuration(&mcconf);
+		mc_interface_set_configuration(&mcconf);
 
 		ind = 0;
-		send_buffer[ind++] = COMM_SET_MCCONF;
+		send_buffer[ind++] = packet_id;
 		commands_send_packet(send_buffer, ind);
 		break;
 
 	case COMM_GET_MCCONF:
-		mcconf = *mcpwm_get_configuration();
+	case COMM_GET_MCCONF_DEFAULT:
+		if (packet_id == COMM_GET_MCCONF) {
+			mcconf = *mc_interface_get_configuration();
+		} else {
+			conf_general_get_default_mc_configuration(&mcconf);
+		}
 
 		ind = 0;
-		send_buffer[ind++] = COMM_GET_MCCONF;
+		send_buffer[ind++] = packet_id;
 
 		send_buffer[ind++] = mcconf.pwm_mode;
 		send_buffer[ind++] = mcconf.comm_mode;
@@ -425,15 +431,20 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		timeout_configure(appconf.timeout_msec, appconf.timeout_brake_current);
 
 		ind = 0;
-		send_buffer[ind++] = COMM_SET_APPCONF;
+		send_buffer[ind++] = packet_id;
 		commands_send_packet(send_buffer, ind);
 		break;
 
 	case COMM_GET_APPCONF:
-		appconf = *app_get_configuration();
+	case COMM_GET_APPCONF_DEFAULT:
+		if (packet_id == COMM_GET_APPCONF) {
+			appconf = *app_get_configuration();
+		} else {
+			conf_general_get_default_app_configuration(&appconf);
+		}
 
 		ind = 0;
-		send_buffer[ind++] = COMM_GET_APPCONF;
+		send_buffer[ind++] = packet_id;
 		send_buffer[ind++] = appconf.controller_id;
 		buffer_append_uint32(send_buffer, appconf.timeout_msec, &ind);
 		buffer_append_int32(send_buffer, (int32_t)(appconf.timeout_brake_current * 1000.0), &ind);
