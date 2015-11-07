@@ -154,6 +154,8 @@ static THD_WORKING_AREA(timer_thread_wa, 2048);
 static THD_FUNCTION(timer_thread, arg);
 static THD_WORKING_AREA(rpm_thread_wa, 1024);
 static THD_FUNCTION(rpm_thread, arg);
+static volatile bool timer_thd_stop;
+static volatile bool rpm_thd_stop;
 
 void mcpwm_init(volatile mc_configuration *configuration) {
 	utils_sys_lock_cnt();
@@ -438,6 +440,8 @@ void mcpwm_init(volatile mc_configuration *configuration) {
 	TIM_Cmd(TIM12, ENABLE);
 
 	// Start threads
+	timer_thd_stop = false;
+	rpm_thd_stop = false;
 	chThdCreateStatic(timer_thread_wa, sizeof(timer_thread_wa), NORMALPRIO, timer_thread, NULL);
 	chThdCreateStatic(rpm_thread_wa, sizeof(rpm_thread_wa), NORMALPRIO, rpm_thread, NULL);
 
@@ -450,6 +454,26 @@ void mcpwm_init(volatile mc_configuration *configuration) {
 	// Reset tachometers again
 	tachometer = 0;
 	tachometer_abs = 0;
+}
+
+void mcpwm_deinit(void) {
+	WWDG_DeInit();
+
+	timer_thd_stop = true;
+	rpm_thd_stop = true;
+
+	while (timer_thd_stop || rpm_thd_stop) {
+		chThdSleepMilliseconds(1);
+	}
+
+	TIM_DeInit(TIM1);
+	TIM_DeInit(TIM2);
+	TIM_DeInit(TIM8);
+	TIM_DeInit(TIM12);
+	ADC_DeInit();
+	DMA_DeInit(DMA2_Stream4);
+	nvicDisableVector(ADC_IRQn);
+	dmaStreamRelease(STM32_DMA_STREAM(STM32_DMA_STREAM_ID(2, 4)));
 }
 
 void mcpwm_set_configuration(volatile mc_configuration *configuration) {
@@ -1138,6 +1162,11 @@ static THD_FUNCTION(rpm_thread, arg) {
 	chRegSetThreadName("rpm timer");
 
 	for (;;) {
+		if (rpm_thd_stop) {
+			rpm_thd_stop = false;
+			return;
+		}
+
 		if (rpm_dep.comms != 0) {
 			utils_sys_lock_cnt();
 			const float comms = (float)rpm_dep.comms;
@@ -1199,6 +1228,11 @@ static THD_FUNCTION(timer_thread, arg) {
 	float max_s;
 
 	for(;;) {
+		if (timer_thd_stop) {
+			timer_thd_stop = false;
+			return;
+		}
+
 		if (state == MC_STATE_OFF) {
 			// Track the motor back-emf and follow it with dutycycle_now. Also track
 			// the direction of the motor.

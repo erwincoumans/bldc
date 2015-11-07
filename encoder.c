@@ -30,13 +30,15 @@
 
 // Private variables
 static bool index_found;
+static uint32_t enc_counts = 6400;
 
-void encoder_init(void) {
+void encoder_init(uint32_t counts) {
 	EXTI_InitTypeDef   EXTI_InitStructure;
 	NVIC_InitTypeDef   NVIC_InitStructure;
 
 	// Initialize variables
 	index_found = false;
+	enc_counts = counts;
 
 	palSetPadMode(HW_HALL_ENC_GPIO1, HW_HALL_ENC_PIN1,
 			PAL_MODE_ALTERNATE(HW_ENC_TIM_AF) |
@@ -57,7 +59,7 @@ void encoder_init(void) {
 	TIM_EncoderInterfaceConfig (HW_ENC_TIM, TIM_EncoderMode_TI12,
 			TIM_ICPolarity_Rising,
 			TIM_ICPolarity_Rising);
-	TIM_SetAutoreload(HW_ENC_TIM, ENCODER_COUNTS - 1);
+	TIM_SetAutoreload(HW_ENC_TIM, enc_counts - 1);
 
 	TIM_Cmd (HW_ENC_TIM, ENABLE);
 
@@ -82,7 +84,7 @@ void encoder_init(void) {
 }
 
 float encoder_read_deg(void) {
-	return ((float)HW_ENC_TIM->CNT * 360.0) / (float)ENCODER_COUNTS;
+	return ((float)HW_ENC_TIM->CNT * 360.0) / (float)enc_counts;
 }
 
 /**
@@ -91,6 +93,17 @@ float encoder_read_deg(void) {
 void encoder_reset(void) {
 	HW_ENC_TIM->CNT = 0;
 	index_found = true;
+}
+
+/**
+ * Set the number of encoder counts.
+ *
+ * @param counts
+ * The number of encoder counts
+ */
+void encoder_set_counts(uint32_t counts) {
+	enc_counts = counts;
+	TIM_SetAutoreload(HW_ENC_TIM, enc_counts - 1);
 }
 
 /**

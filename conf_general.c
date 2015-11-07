@@ -163,6 +163,20 @@ void conf_general_get_default_mc_configuration(mc_configuration *conf) {
 	conf->sl_cycle_int_rpm_br = MCCONF_SL_CYCLE_INT_BR;
 	conf->sl_bemf_coupling_k = MCCONF_SL_BEMF_COUPLING_K;
 
+	conf->foc_current_kp = MCCONF_FOC_CURRENT_KP;
+	conf->foc_current_ki = MCCONF_FOC_CURRENT_KI;
+	conf->foc_f_sw = MCCONF_FOC_F_SW;
+	conf->foc_encoder_inverted = MCCONF_FOC_ENCODER_INVERTED;
+	conf->foc_encoder_offset = MCCONF_FOC_ENCODER_OFFSET;
+	conf->foc_encoder_ratio = MCCONF_FOC_ENCODER_RATIO;
+	conf->foc_sensor_mode = MCCONF_FOC_SENSOR_MODE;
+	conf->foc_pll_kp = MCCONF_FOC_PLL_KP;
+	conf->foc_pll_ki = MCCONF_FOC_PLL_KI;
+	conf->foc_motor_l = MCCONF_FOC_MOTOR_L;
+	conf->foc_motor_r = MCCONF_FOC_MOTOR_R;
+	conf->foc_motor_flux_linkage = MCCONF_FOC_MOTOR_FLUX_LINKAGE;
+	conf->foc_observer_gain = MCCONF_FOC_OBSERVER_GAIN;
+
 	conf->hall_table[0] = MCCONF_HALL_TAB_0;
 	conf->hall_table[1] = MCCONF_HALL_TAB_1;
 	conf->hall_table[2] = MCCONF_HALL_TAB_2;
@@ -191,6 +205,7 @@ void conf_general_get_default_mc_configuration(mc_configuration *conf) {
 	conf->m_duty_ramp_step = MCCONF_M_RAMP_STEP;
 	conf->m_duty_ramp_step_rpm_lim = MCCONF_M_RAMP_STEP_RPM_LIM;
 	conf->m_current_backoff_gain = MCCONF_M_CURRENT_BACKOFF_GAIN;
+	conf->m_encoder_counts = MCCONF_M_ENCODER_COUNTS;
 }
 
 /**

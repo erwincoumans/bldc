@@ -104,7 +104,20 @@ const volatile mc_configuration* mc_interface_get_configuration(void) {
 }
 
 void mc_interface_set_configuration(mc_configuration *configuration) {
-	conf = *configuration;
+	if (conf.motor_type == MOTOR_TYPE_FOC
+			&& configuration->motor_type != MOTOR_TYPE_FOC) {
+		mcpwm_foc_deinit();
+		conf = *configuration;
+		mcpwm_init(&conf);
+	} else if (conf.motor_type != MOTOR_TYPE_FOC
+			&& configuration->motor_type == MOTOR_TYPE_FOC) {
+		mcpwm_deinit();
+		conf = *configuration;
+		mcpwm_foc_init(&conf);
+	} else {
+		conf = *configuration;
+	}
+
 	update_override_limits(&conf);
 
 	switch (conf.motor_type) {
@@ -743,14 +756,22 @@ void mc_interface_mc_timer_isr(void) {
 	motor_current_iterations++;
 	input_current_iterations++;
 
+	float abs_current = mc_interface_get_tot_current();
+	float abs_current_filtered = current;
+	if (conf.motor_type == MOTOR_TYPE_FOC) {
+		// TODO: Make this more general
+		abs_current = mcpwm_foc_get_abs_motor_current();
+		abs_current_filtered = abs_current;
+	}
+
 	// Current fault code
 	if (conf.l_slow_abs_current) {
-		if (fabsf(current) > conf.l_abs_current_max) {
-			mc_interface_fault_stop(FAULT_CODE_ABS_OVER_CURRENT);
+		if (fabsf(abs_current_filtered) > conf.l_abs_current_max) {
+			//mc_interface_fault_stop(FAULT_CODE_ABS_OVER_CURRENT);
 		}
 	} else {
-		if (fabsf(mc_interface_get_tot_current()) > conf.l_abs_current_max) {
-			mc_interface_fault_stop(FAULT_CODE_ABS_OVER_CURRENT);
+		if (fabsf(abs_current) > conf.l_abs_current_max) {
+			//mc_interface_fault_stop(FAULT_CODE_ABS_OVER_CURRENT);
 		}
 	}
 

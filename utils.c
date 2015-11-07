@@ -198,6 +198,28 @@ float utils_fast_inv_sqrt(float x) {
 	return un.as_float;
 }
 
+// Code originally from http://www.dspguru.com/dsp/tricks/fixed-point-atan2-with-self-normalization
+float utils_fast_atan2(float y, float x) {
+	float abs_y = fabsf(y) + 1e-10; // kludge to prevent 0/0 condition
+	float angle;
+
+	if (x>=0) {
+		float r = (x - abs_y) / (x + abs_y);
+		float rsq = r * r;
+		angle = ((0.1963 * rsq) - 0.9817) * r + (M_PI /4.0);
+	} else {
+		float r = (x + abs_y) / (abs_y - x);
+		float rsq = r * r;
+		angle = ((0.1963 * rsq) - 0.9817) * r + (3.0 * M_PI / 4.0);
+	}
+
+	if (y < 0) {
+		return(-angle);
+	} else {
+		return(angle);
+	}
+}
+
 /**
  * Truncate the magnitude of a vector.
  *
@@ -216,6 +238,14 @@ float utils_fast_inv_sqrt(float x) {
 bool utils_saturate_vector_2d(float *x, float *y, float max) {
 	bool retval = false;
 	float mag = sqrtf(*x * *x + *y * *y);
+
+	if (fabsf(max) < 1e-10) {
+		if (max > 0.0) {
+			max = 1e-10;
+		} else {
+			max = -1e-10;
+		}
+	}
 
 	if (mag > max) {
 		const float f = max / mag;

@@ -27,6 +27,7 @@
 #include "main.h"
 #include "mc_interface.h"
 #include "mcpwm.h"
+#include "mcpwm_foc.h"
 #include "ledpwm.h"
 #include "comm_usb.h"
 #include "ledpwm.h"
@@ -42,6 +43,7 @@
 #include "encoder.h"
 #include "servo.h"
 #include "servo_simple.h"
+#include "utils.h"
 
 /*
  * Timers used:
@@ -148,6 +150,7 @@ static THD_FUNCTION(periodic_thread, arg) {
 		}
 
 #if ENCODER_ENABLE
+//		commands_send_rotor_pos(utils_angle_difference(mcpwm_foc_get_phase_observer(), mcpwm_foc_get_phase_encoder()));
 		commands_send_rotor_pos(encoder_read_deg());
 //		comm_can_set_pos(0, encoder_read_deg());
 #endif
@@ -298,6 +301,11 @@ int main(void) {
 
 	mc_configuration mcconf;
 	conf_general_read_mc_configuration(&mcconf);
+
+#if ENCODER_ENABLE
+	encoder_init(mcconf.m_encoder_counts);
+#endif
+
 	mc_interface_init(&mcconf);
 
 	commands_init();
@@ -317,10 +325,6 @@ int main(void) {
 #if WS2811_ENABLE
 	ws2811_init();
 	led_external_init();
-#endif
-
-#if ENCODER_ENABLE
-	encoder_init();
 #endif
 
 #if SERVO_OUT_ENABLE

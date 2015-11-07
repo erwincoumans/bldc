@@ -31,6 +31,7 @@
 
 // Functions
 void mcpwm_foc_init(volatile mc_configuration *configuration);
+void mcpwm_foc_deinit(void);
 void mcpwm_foc_set_configuration(volatile mc_configuration *configuration);
 mc_state mcpwm_foc_get_state(void);
 bool mcpwm_foc_is_dccal_done(void);
@@ -47,11 +48,15 @@ float mcpwm_foc_get_switching_frequency_now(void);
 float mcpwm_foc_get_rpm(void);
 float mcpwm_foc_get_tot_current(void);
 float mcpwm_foc_get_tot_current_filtered(void);
+float mcpwm_foc_get_abs_motor_current(void);
 float mcpwm_foc_get_tot_current_directional(void);
 float mcpwm_foc_get_tot_current_directional_filtered(void);
 float mcpwm_foc_get_tot_current_in(void);
 float mcpwm_foc_get_tot_current_in_filtered(void);
-void mcpwm_foc_encoder_detect(float current, float *offset, bool *direction);
+float mcpwm_foc_get_phase(void);
+float mcpwm_foc_get_phase_observer(void);
+float mcpwm_foc_get_phase_encoder(void);
+void mcpwm_foc_encoder_detect(float current, float *offset, float *ratio, bool *inverted);
 
 // Interrupt handlers
 void mcpwm_foc_adc_inj_int_handler(void);

@@ -26,6 +26,7 @@
 #include "hal.h"
 #include "terminal.h"
 #include "mcpwm.h"
+#include "mcpwm_foc.h"
 #include "mc_interface.h"
 #include "commands.h"
 #include "main.h"
@@ -210,6 +211,29 @@ void terminal_process_string(char *str) {
 				commands_printf("Duty               : %.2f\n", (double)msg->duty);
 			}
 		}
+	} else if (strcmp(argv[0], "foc_encoder_detect") == 0) {
+		if (argc == 2) {
+			float current = -1.0;
+			sscanf(argv[1], "%f", &current);
+
+			const volatile mc_configuration *mcconf = mc_interface_get_configuration();
+
+			if (current > 0.0 && current < mcconf->l_current_max) {
+				float offset = 0.0;
+				float ratio = 0.0;
+				bool inverted = false;
+				mcpwm_foc_encoder_detect(current, &offset, &ratio, &inverted);
+
+				commands_printf("Offset   : %.2f", (double)offset);
+				commands_printf("Ratio    : %.2f", (double)ratio);
+				commands_printf("Inverted : %s\n", inverted ? "true" : "false");
+
+			} else {
+				commands_printf("Invalid argument(s).\n");
+			}
+		} else {
+			commands_printf("This command requires one argument.\n");
+		}
 	}
 
 	// The help command
@@ -263,7 +287,10 @@ void terminal_process_string(char *str) {
 		commands_printf("  Prints some rpm-dep values");
 
 		commands_printf("can_devs");
-		commands_printf("  Prints all CAN devices seen on the bus the past second\n");
+		commands_printf("  Prints all CAN devices seen on the bus the past second");
+
+		commands_printf("foc_encoder_detect [current]");
+		commands_printf("  Run the motor at 1Hz on open loop and compute encoder settings\n");
 	} else {
 		commands_printf("Invalid command: %s\n"
 				"type help to list all available commands\n", argv[0]);

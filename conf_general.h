@@ -26,8 +26,8 @@
 #define CONF_GENERAL_H_
 
 // Firmware version
-#define FW_VERSION_MAJOR	1
-#define FW_VERSION_MINOR	15
+#define FW_VERSION_MAJOR	2
+#define FW_VERSION_MINOR	0
 
 #include "datatypes.h"
 
@@ -68,6 +68,7 @@
 //#define MCCONF_DEFAULT_USER		"mcconf_outrunner2.h"
 //#define MCCONF_DEFAULT_USER		"mcconf_sten.h"
 #define MCCONF_DEFAULT_USER		"mcconf_foc_erwin.h"
+//#define MCCONF_DEFAULT_USER		"mcconf_foc_scorpion.h"
 
 /*
  * Select default user app configuration
@@ -85,9 +86,9 @@
 /*
  * Use encoder
  */
+#ifndef ENCODER_ENABLE
 #define ENCODER_ENABLE			1
-#define ENCODER_COUNTS			6400
-#define ECNODER_MOTOR_RATIO		7
+#endif
 
 /*
  * Enable CAN-bus

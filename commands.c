@@ -41,6 +41,7 @@
 #include "flash_helper.h"
 #include "utils.h"
 #include "packet.h"
+#include "encoder.h"
 
 #include <math.h>
 #include <string.h>
@@ -273,6 +274,20 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		ind += 8;
 		mcconf.hall_sl_erpm = (float)buffer_get_int32(data, &ind) / 1000.0;
 
+		mcconf.foc_current_kp = buffer_get_float32(data, 1e5, &ind);
+		mcconf.foc_current_ki = buffer_get_float32(data, 1e5, &ind);
+		mcconf.foc_f_sw = buffer_get_float32(data, 1e3, &ind);
+		mcconf.foc_encoder_inverted = data[ind++];
+		mcconf.foc_encoder_offset = buffer_get_float32(data, 1e3, &ind);
+		mcconf.foc_encoder_ratio = buffer_get_float32(data, 1e3, &ind);
+		mcconf.foc_sensor_mode = data[ind++];
+		mcconf.foc_pll_kp = buffer_get_float32(data, 1e3, &ind);
+		mcconf.foc_pll_ki = buffer_get_float32(data, 1e3, &ind);
+		mcconf.foc_motor_l = buffer_get_float32(data, 1e8, &ind);
+		mcconf.foc_motor_r = buffer_get_float32(data, 1e5, &ind);
+		mcconf.foc_motor_flux_linkage = buffer_get_float32(data, 1e5, &ind);
+		mcconf.foc_observer_gain = buffer_get_float32(data, 1e0, &ind);
+
 		mcconf.s_pid_kp = (float)buffer_get_int32(data, &ind) / 1000000.0;
 		mcconf.s_pid_ki = (float)buffer_get_int32(data, &ind) / 1000000.0;
 		mcconf.s_pid_kd = (float)buffer_get_int32(data, &ind) / 1000000.0;
@@ -291,9 +306,14 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		mcconf.m_duty_ramp_step = (float)buffer_get_float32(data, 1000000.0, &ind);
 		mcconf.m_duty_ramp_step_rpm_lim = (float)buffer_get_float32(data, 1000000.0, &ind);
 		mcconf.m_current_backoff_gain = (float)buffer_get_float32(data, 1000000.0, &ind);
+		mcconf.m_encoder_counts = buffer_get_uint32(data, &ind);
 
 		conf_general_store_mc_configuration(&mcconf);
 		mc_interface_set_configuration(&mcconf);
+
+#if ENCODER_ENABLE
+		encoder_set_counts(mcconf.m_encoder_counts);
+#endif
 
 		ind = 0;
 		send_buffer[ind++] = packet_id;
@@ -350,6 +370,20 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		ind += 8;
 		buffer_append_int32(send_buffer, (int32_t)(mcconf.hall_sl_erpm * 1000.0), &ind);
 
+		buffer_append_float32(send_buffer, mcconf.foc_current_kp, 1e5, &ind);
+		buffer_append_float32(send_buffer, mcconf.foc_current_ki, 1e5, &ind);
+		buffer_append_float32(send_buffer, mcconf.foc_f_sw, 1e3, &ind);
+		send_buffer[ind++] = mcconf.foc_encoder_inverted;
+		buffer_append_float32(send_buffer, mcconf.foc_encoder_offset, 1e3, &ind);
+		buffer_append_float32(send_buffer, mcconf.foc_encoder_ratio, 1e3, &ind);
+		send_buffer[ind++] = mcconf.foc_sensor_mode;
+		buffer_append_float32(send_buffer, mcconf.foc_pll_kp, 1e3, &ind);
+		buffer_append_float32(send_buffer, mcconf.foc_pll_ki, 1e3, &ind);
+		buffer_append_float32(send_buffer, mcconf.foc_motor_l, 1e8, &ind);
+		buffer_append_float32(send_buffer, mcconf.foc_motor_r, 1e5, &ind);
+		buffer_append_float32(send_buffer, mcconf.foc_motor_flux_linkage, 1e5, &ind);
+		buffer_append_float32(send_buffer, mcconf.foc_observer_gain, 1e0, &ind);
+
 		buffer_append_int32(send_buffer, (int32_t)(mcconf.s_pid_kp * 1000000.0), &ind);
 		buffer_append_int32(send_buffer, (int32_t)(mcconf.s_pid_ki * 1000000.0), &ind);
 		buffer_append_int32(send_buffer, (int32_t)(mcconf.s_pid_kd * 1000000.0), &ind);
@@ -368,6 +402,7 @@ void commands_process_packet(unsigned char *data, unsigned int len) {
 		buffer_append_float32(send_buffer, mcconf.m_duty_ramp_step, 1000000.0, &ind);
 		buffer_append_float32(send_buffer, mcconf.m_duty_ramp_step_rpm_lim, 1000000.0, &ind);
 		buffer_append_float32(send_buffer, mcconf.m_current_backoff_gain, 1000000.0, &ind);
+		buffer_append_uint32(send_buffer, mcconf.m_encoder_counts, &ind);
 
 		commands_send_packet(send_buffer, ind);
 		break;
